@@ -1,0 +1,97 @@
+from enum import Enum
+import random
+from typing import List
+import numpy as np
+
+class Action(Enum):
+  ROCK = 0
+  PAPER = 1
+  SCISSORS = 2
+
+def get_strategy(cumulative_regrets: np.array) -> np.array:
+    """Return regret-matching strategy"""
+    pos_cumulative_regrets = np.maximum(0, cumulative_regrets)
+    if sum(pos_cumulative_regrets) > 0: 
+        return pos_cumulative_regrets / sum(pos_cumulative_regrets)
+    else:
+        return np.full(shape=len(Action), fill_value=1/len(Action))
+
+def get_payoff(action_1: Action, action_2: Action) -> int:
+    """Returns the payoff for player 1"""
+    mod3_val = (action_1.value - action_2.value) % 3
+    if mod3_val == 2:
+        return -1
+    else:
+        return mod3_val
+
+def get_regrets(payoff: int, action_2: Action) -> List[int]:
+    """return regrets"""
+    return np.array([get_payoff(a, action_2) - payoff for a in Action])
+
+def getScoreAndPrintWinner(p1_action, p2_action, p1_wins_counter, p2_wins_counter):
+    if p1_action == p2_action:
+        score = 'draw'
+    elif p1_action == Action.ROCK and p2_action == Action.PAPER:
+        score = 'p2 wins'
+    elif p1_action == Action.ROCK and p2_action == Action.SCISSORS:
+        score = 'p1 wins'
+    elif p1_action == Action.PAPER and p2_action == Action.ROCK:
+        score = 'p1 wins'
+    elif p1_action == Action.PAPER and p2_action == Action.SCISSORS:
+        score = 'p2 wins'
+    elif p1_action == Action.SCISSORS and p2_action == Action.ROCK:
+        score = 'p2 wins'
+    elif p1_action == Action.SCISSORS and p2_action == Action.PAPER:
+        score = 'p1 wins'
+    
+    if score == 'p1 wins':  
+        p1_wins_counter += 1  
+    else: 
+        p1_wins_counter += 0
+    if score == 'p2 wins':  
+        p2_wins_counter += 1  
+    else: 
+        p2_wins_counter += 0
+    print('p1_wins_counter: ', p1_wins_counter, 'p2_wins_counter: ', p2_wins_counter)
+    return p1_wins_counter, p2_wins_counter
+
+
+
+
+
+
+
+
+
+num_iterations = 10000
+cumulative_regrets = np.zeros(shape=(len(Action)), dtype=int)
+strategy_sum = np.zeros(shape=(len(Action)))
+fixed_p2_strategy = [0.5, 0.2, 0.3]
+
+p1_wins_counter = 0
+p2_wins_counter = 0
+for _ in range(num_iterations):
+    #  compute the strategy according to regret matching
+    strategy = get_strategy(cumulative_regrets)
+    print('p1_strategy: ', strategy)
+
+    #  add the strategy to p1 running total of strategy probabilities
+    strategy_sum += strategy
+    
+    # Choose p1 action and p1 opponent's action ----------------------------------
+    p2_action = list(Action)[int(input('Enter 0, 1 or 2: '))] #p2_action = random.choices(list(Action), weights=fixed_p2_strategy)[0]         # weights=strategy) for both agents to use the regret matching strategy
+    print('p2_action: ', p2_action)
+    p1_action = random.choices(list(Action), weights=strategy)[0]
+    print('p1_action: ',p1_action)
+    
+    p1_wins_counter, p2_wins_counter = getScoreAndPrintWinner(p1_action, p2_action, p1_wins_counter, p2_wins_counter)
+   
+    #  compute the payoff and regrets
+    p1_payoff = get_payoff(p1_action, p2_action)
+    regrets = get_regrets(p1_payoff, p2_action)
+    
+    #  add regrets from this round to the cumulative regrets
+    cumulative_regrets += regrets
+
+optimal_strategy = strategy_sum / num_iterations
+print(optimal_strategy)
